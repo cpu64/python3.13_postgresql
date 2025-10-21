@@ -29,6 +29,9 @@ su -c "/usr/lib/postgresql/*/bin/pg_ctl start -D $PGDATA -l $PGLOGS/postgresql.l
 # Check if the database exists
 DB_EXISTS=$(psql -U $PGUSER -h $PGHOST -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE'")
 
+DB_EXISTS="${DB_EXISTS#"${DB_EXISTS%%[![:space:]]*}"}"  # Remove leading whitespace
+DB_EXISTS="${DB_EXISTS%"${DB_EXISTS##[![:space:]]*}"}"  # Remove trailing whitespace
+
 # If the database does not exist, create it and run the init.sql script
 if [ "$DB_EXISTS" != "1" ]; then
     echo "Database $PGDATABASE does not exist. Creating database..."
