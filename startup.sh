@@ -20,11 +20,29 @@ chown -R postgres:postgres $PGDATA $PGINIT $PGLOGS
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
     echo "Initializing PostgreSQL database..."
     su -c "/usr/lib/postgresql/*/bin/initdb -D $PGDATA" postgres
+
+    # Modify postgresql.conf to allow connections from any IP
+    echo "listen_addresses = '*'" >> $PGDATA/postgresql.conf
+
+    # Modify pg_hba.conf to allow md5 authentication from any IP
+    echo "host all all all scram-sha-256" >> $PGDATA/pg_hba.conf
 fi
 
 # Start the PostgreSQL service
 echo "Starting PostgreSQL..."
 su -c "/usr/lib/postgresql/*/bin/pg_ctl start -D $PGDATA -l $PGLOGS/postgresql.log" postgres
+
+# Ensure the password is correct for the user, either create or alter the user
+psql -U $PGUSER -h $PGHOST -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname = '$PGUSER'" | grep -q 1
+if [ $? -eq 0 ]; then
+    # If the user exists, alter the password
+    echo "User $PGUSER exists. Updating password..."
+    psql -U $PGUSER -h $PGHOST -d postgres -c "ALTER USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
+else
+    # If the user does not exist, create the user with the specified password
+    echo "User $PGUSER does not exist. Creating user..."
+    psql -U $PGUSER -h $PGHOST -d postgres -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
+fi
 
 # Check if the database exists
 DB_EXISTS=$(psql -U $PGUSER -h $PGHOST -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE'")
@@ -47,9 +65,6 @@ if [ "$DB_EXISTS" != "1" ]; then
 else
     echo "Database $PGDATABASE already exists. Skipping creation and initialization."
 fi
-
-# Create the PostgreSQL user if it doesn't exist
-psql -U $PGUSER -h $PGHOST -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname = '$PGUSER'" | grep -q 1 || psql -U $PGUSER -h $PGHOST -d postgres -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
 
 # Grant privileges to the user on the database
 psql -U $PGUSER -h $PGHOST -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $PGDATABASE TO $PGUSER;"
