@@ -33,19 +33,19 @@ echo "Starting PostgreSQL..."
 su -c "/usr/lib/postgresql/*/bin/pg_ctl start -D $PGDATA -l $PGLOGS/postgresql.log" postgres
 
 # Ensure the password is correct for the user, either create or alter the user
-psql -U $PGUSER -h $PGHOST -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname = '$PGUSER'" | grep -q 1
+psql -U postgres -h $PGHOST -d postgres -c "SELECT 1 FROM pg_roles WHERE rolname = '$PGUSER'" | grep -q 1
 if [ $? -eq 0 ]; then
     # If the user exists, alter the password
     echo "User $PGUSER exists. Updating password..."
-    psql -U $PGUSER -h $PGHOST -d postgres -c "ALTER USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
+    psql -U postgres -h $PGHOST -d postgres -c "ALTER USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
 else
     # If the user does not exist, create the user with the specified password
     echo "User $PGUSER does not exist. Creating user..."
-    psql -U $PGUSER -h $PGHOST -d postgres -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
+    psql -U postgres -h $PGHOST -d postgres -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
 fi
 
 # Check if the database exists
-DB_EXISTS=$(psql -U $PGUSER -h $PGHOST -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE'")
+DB_EXISTS=$(psql -U postgres -h $PGHOST -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE'")
 
 DB_EXISTS="${DB_EXISTS#"${DB_EXISTS%%[![:space:]]*}"}"  # Remove leading whitespace
 DB_EXISTS="${DB_EXISTS%"${DB_EXISTS##[![:space:]]*}"}"  # Remove trailing whitespace
@@ -53,12 +53,12 @@ DB_EXISTS="${DB_EXISTS%"${DB_EXISTS##[![:space:]]*}"}"  # Remove trailing whites
 # If the database does not exist, create it and run the init.sql script
 if [ "$DB_EXISTS" != "1" ]; then
     echo "Database $PGDATABASE does not exist. Creating database..."
-    psql -U $PGUSER -h $PGHOST -d postgres -c "CREATE DATABASE $PGDATABASE;"
+    psql -U postgres -h $PGHOST -d postgres -c "CREATE DATABASE $PGDATABASE;"
 
     # Check if init.sql script exists and run it
     if [ -f "$PGINIT/init.sql" ]; then
         echo "Running SQL script to initialize the database..."
-        psql -U $PGUSER -h $PGHOST -d $PGDATABASE -f "$PGINIT/init.sql"
+        psql -U postgres -h $PGHOST -d $PGDATABASE -f "$PGINIT/init.sql"
     else
         echo "SQL script not found, skipping initialization."
     fi
@@ -67,7 +67,7 @@ else
 fi
 
 # Grant privileges to the user on the database
-psql -U $PGUSER -h $PGHOST -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $PGDATABASE TO $PGUSER;"
+psql -U postgres -h $PGHOST -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $PGDATABASE TO $PGUSER;"
 
 # Run the command passed as CMD
 exec "$@"
