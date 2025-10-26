@@ -55,19 +55,20 @@ if [ "$DB_EXISTS" != "1" ]; then
     echo "Database $PGDATABASE does not exist. Creating database..."
     psql -U postgres -h $PGHOST -d postgres -c "CREATE DATABASE $PGDATABASE;"
 
+    # Grant privileges to the user on the database
+    psql -U postgres -h $PGHOST -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $PGDATABASE TO $PGUSER;"
     # Check if init.sql script exists and run it
     if [ -f "$PGINIT/init.sql" ]; then
         echo "Running SQL script to initialize the database..."
-        psql -U postgres -h $PGHOST -d $PGDATABASE -f "$PGINIT/init.sql"
+        psql -U $PGUSER -h $PGHOST -d $PGDATABASE -f "$PGINIT/init.sql"
     else
         echo "SQL script not found, skipping initialization."
     fi
 else
     echo "Database $PGDATABASE already exists. Skipping creation and initialization."
+    # Grant privileges to the user on the database
+    psql -U postgres -h $PGHOST -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $PGDATABASE TO $PGUSER;"
 fi
-
-# Grant privileges to the user on the database
-psql -U postgres -h $PGHOST -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $PGDATABASE TO $PGUSER;"
 
 # Run the command passed as CMD
 exec "$@"
