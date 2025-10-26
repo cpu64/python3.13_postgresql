@@ -14,7 +14,7 @@ export PGLOGS="$PGDIR/logs"
 mkdir -p $PGDATA $PGINIT $PGLOGS
 
 # Set the correct permissions for PostgreSQL to access /db
-chown -R postgres:postgres $PGDATA $PGINIT $PGLOGS
+chown -R postgres:postgres $PGDATA $PGLOGS
 
 # Initialize PostgreSQL database (only if it's not initialized yet)
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
